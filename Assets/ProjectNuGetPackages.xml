@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<packages>
+  <ignore id="Microsoft.CSharp" />
+
+  <!-- Development packages -->
+  <package id="Moq" version="4.16.1" allowedVersions="[4.16.1,5.0)" developmentDependency="true" />
+  <package id="JWT" version="8.2.3" allowedVersions="[8.2.3,9.0)" developmentDependency="true" />
+  <package id="BouncyCastle" version="1.8.9" allowedVersions="[1.8.9,2.0)" developmentDependency="true" />
+
+  <!-- Runtime packages -->
+  <package id="AWSSDK.S3" version="3.7.0.2" allowedVersions="[3.7.0.2,4.0)" />
+  <package id="CsvHelper" version="26.1.0" allowedVersions="[26.1.0,27.0)" />
+  <package id="Ensure.That" version="10.0.0" allowedVersions="[10.0.0,11.0)" />
+  <package id="MathParser.org-mXparser" version="4.4.2" allowedVersions="[4.4.2,5.0)" />
+  <package id="NGettext" version="0.6.6" allowedVersions="[0.6.6,1.0)" />
+  <package id="NLog" version="4.7.9" allowedVersions="[4.7.9,5.0)" />
+  <package id="Semver" version="2.0.6" allowedVersions="[2.0.6,3.0)" targetFramework="net452" />
+  <package id="YamlDotNet" version="11.0.1" allowedVersions="[11.0.1,12.0)" />
+
+  <!-- Ignore packages -->
+  <ignore id="System.Collections.*" />
+  <ignore id="System.ComponentModel.*" />
+  <ignore id="System.Diagnostics.*" />
+  <ignore id="System.Globalization.*" />
+  <ignore id="System.IO.*" />
+  <ignore id="System.Reflection.*" />
+  <ignore id="System.Xml.*" />
+</packages>
