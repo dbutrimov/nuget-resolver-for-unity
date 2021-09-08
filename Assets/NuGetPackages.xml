@@ -18,7 +18,6 @@
   <package id="YamlDotNet" version="11.0.1" allowedVersions="[11.0.1,12.0)" />
 
   <!-- Ignore packages -->
-  <ignore id="System.Collections.*" />
   <ignore id="System.ComponentModel.*" />
   <ignore id="System.Diagnostics.*" />
   <ignore id="System.Globalization.*" />
