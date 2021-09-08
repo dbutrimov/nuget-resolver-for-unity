@@ -74,6 +74,7 @@ namespace NuGetResolver.Editor {
       var assetsDir = new DirectoryInfo(Path.Combine(projectPath, "Assets"));
       logger.LogInformation(assetsDir.FullName);
 
+      var configReader = new ResolveConfigReader();
       var resolveConfig = new ResolveConfig();
 
       var assetNameRegex = new Regex(@"^.*NuGetPackages\.xml$", RegexOptions.IgnoreCase | RegexOptions.Singleline);
@@ -93,7 +94,7 @@ namespace NuGetResolver.Editor {
           logger.LogInformation(assetPath);
 
           using var reader = new StringReader(textAsset.text);
-          var config = await Task.Run(() => ResolveConfig.Read(reader), cancellationToken);
+          var config = await Task.Run(() => configReader.Read(reader), cancellationToken);
           resolveConfig.Update(config);
         }
 

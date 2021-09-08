@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using NuGet.Common;
@@ -149,6 +150,16 @@ namespace NuGetResolver.Editor {
       }
 
       return null;
+    }
+
+
+    public static void Update(this ResolveConfig config, ResolveConfig other) {
+      config.Packages.AddRange(other.Packages);
+      config.Ignores.AddRange(other.Ignores);
+    }
+
+    public static bool IsIgnored(this ResolveConfig config, string packageId) {
+      return config.Ignores.Any(x => x.IsMatch(packageId));
     }
   }
 }
