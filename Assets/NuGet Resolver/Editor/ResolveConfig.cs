@@ -4,7 +4,9 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml;
 using NuGet.Frameworks;
@@ -120,9 +122,9 @@ namespace NuGetResolver.Editor {
       return config;
     }
 
-    public static ResolveConfig Read(string fileName) {
+    public static ResolveConfig Read(XmlReader reader) {
       var doc = new XmlDocument();
-      doc.Load(fileName);
+      doc.Load(reader);
 
       var rootNode = doc.DocumentElement;
       if (rootNode == null || rootNode.Name != "packages") {
@@ -130,6 +132,21 @@ namespace NuGetResolver.Editor {
       }
 
       return Read(rootNode);
+    }
+
+    public static ResolveConfig Read(TextReader reader) {
+      using var xmlReader = new XmlTextReader(reader);
+      return Read(xmlReader);
+    }
+
+    public static ResolveConfig Read(Stream stream) {
+      using var reader = new StreamReader(stream, Encoding.UTF8);
+      return Read(reader);
+    }
+
+    public static ResolveConfig Read(string fileName) {
+      using var stream = File.OpenRead(fileName);
+      return Read(stream);
     }
   }
 }

@@ -7,6 +7,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using NuGet.Common;
@@ -79,15 +80,28 @@ namespace NuGetResolver.Editor {
 
       var resolveConfig = new ResolveConfig();
 
-      var files = assetsDir.GetFiles("*NuGetPackages.xml", SearchOption.AllDirectories);
-      for (var i = 0; i < files.Length; i++) {
-        var fileInfo = files[i];
+      var assetNameRegex = new Regex(@"^.+NuGetPackages\.xml$", RegexOptions.IgnoreCase | RegexOptions.Singleline);
+      var assetGuids = AssetDatabase.FindAssets("*NuGetPackages");
+      for (var i = 0; i < assetGuids.Length; i++) {
+        var assetPath = AssetDatabase.GUIDToAssetPath(assetGuids[i]);
 
-        logger.LogInformation(fileInfo.FullName);
-        var config = await Task.Run(() => ResolveConfig.Read(fileInfo.FullName), cancellationToken);
-        resolveConfig.Update(config);
+        var fileName = Path.GetFileName(assetPath);
+        if (!assetNameRegex.IsMatch(fileName)) {
+          continue;
+        }
 
-        progressReport.Progress = progressSegment.Evaluate((float)(i + 1) / files.Length);
+        var textAsset = AssetDatabase.LoadAssetAtPath<TextAsset>(assetPath);
+        if (textAsset == null) {
+          logger.LogWarning($"No TextAsset at path {assetPath}");
+        } else {
+          logger.LogInformation(assetPath);
+
+          using var reader = new StringReader(textAsset.text);
+          var config = await Task.Run(() => ResolveConfig.Read(reader), cancellationToken);
+          resolveConfig.Update(config);
+        }
+
+        progressReport.Progress = progressSegment.Evaluate((float)(i + 1) / assetGuids.Length);
         progress?.Report(progressReport);
       }
 
@@ -138,7 +152,8 @@ namespace NuGetResolver.Editor {
           targetPackage.TargetFramework,
           targetPackage.IsUserInstalled,
           targetPackage.IsDevelopmentDependency,
-          targetPackage.RequireReinstallation, targetPackage.AllowedVersions);
+          targetPackage.RequireReinstallation,
+          targetPackage.AllowedVersions);
 
         preferredVersions.Add(preferredVersion);
         references.Add(packageReference);

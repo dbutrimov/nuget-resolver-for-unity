@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<packages>
+  <ignore id="Microsoft.CSharp" />
+
+  <!-- Runtime packages -->
+  <package id="Serilog" version="2.10.0" allowedVersions="[2.10.0,3.0)" />
+</packages>

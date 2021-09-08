@@ -1,0 +1,5 @@
+{
+  "name": "my.package.name",
+  "version": "1.0.0",
+  "displayName": "My Package with NuGet"
+}
