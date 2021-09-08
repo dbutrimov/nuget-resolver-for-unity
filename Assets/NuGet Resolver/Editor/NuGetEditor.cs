@@ -63,6 +63,7 @@ namespace NuGetResolver.Editor {
       const DependencyBehavior dependencyBehavior = DependencyBehavior.Highest;
       var targetFramework = NuGetFramework.Parse("netstandard2.0");
       var projectPath = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
+      var tempPath = Path.Combine(projectPath, "Temp");
 
       logger ??= NullLogger.Instance;
 
@@ -70,9 +71,6 @@ namespace NuGetResolver.Editor {
       var progressReport = new ProgressReport { Progress = 0, Info = "Read packages..." };
 
       progress?.Report(progressReport);
-
-      var assetsDir = new DirectoryInfo(Path.Combine(projectPath, "Assets"));
-      logger.LogInformation(assetsDir.FullName);
 
       var configReader = new ResolveConfigReader();
       var resolveConfig = new ResolveConfig();
@@ -183,7 +181,7 @@ namespace NuGetResolver.Editor {
         .Select(p => availablePackages.Single(x => PackageIdentityComparer.Default.Equals(x, p)))
         .ToList();
 
-      var nugetPath = Path.GetFullPath(".nuget");
+      var nugetPath = Path.Combine(tempPath, "NuGet");
       using var deleteNugetDir = new DeleteDirectoryDisposable(nugetPath);
 
       var packagePathResolver = new PackagePathResolver(nugetPath);
@@ -197,11 +195,11 @@ namespace NuGetResolver.Editor {
         DefaultFrameworkNameProvider.Instance,
         new UnityFrameworkCompatibilityProvider());
 
-      var tempPath = Path.GetFullPath(Path.Combine(".temp", $"NuGetResolver-{Guid.NewGuid():N}"));
-      using var deleteTempDir = new DeleteDirectoryDisposable(tempPath);
+      var packagesTempPath = Path.Combine(tempPath, $"NuGetResolver-{Guid.NewGuid():N}");
+      using var deleteTempDir = new DeleteDirectoryDisposable(packagesTempPath);
 
-      var tempRuntimeDir = DirectoryUtility.Create(Path.Combine(tempPath, "Runtime"), true);
-      var tempEditorDir = DirectoryUtility.Create(Path.Combine(tempPath, "Editor"), true);
+      var tempRuntimeDir = DirectoryUtility.Create(Path.Combine(packagesTempPath, "Runtime"), true);
+      var tempEditorDir = DirectoryUtility.Create(Path.Combine(packagesTempPath, "Editor"), true);
 
       for (var i = 0; i < packagesToInstall.Count; i++) {
         var packageToInstall = packagesToInstall[i];
