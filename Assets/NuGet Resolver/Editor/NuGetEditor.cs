@@ -76,8 +76,8 @@ namespace NuGetResolver.Editor {
 
       var resolveConfig = new ResolveConfig();
 
-      var assetNameRegex = new Regex(@"^.+NuGetPackages\.xml$", RegexOptions.IgnoreCase | RegexOptions.Singleline);
-      var assetGuids = AssetDatabase.FindAssets("*NuGetPackages");
+      var assetNameRegex = new Regex(@"^.*NuGetPackages\.xml$", RegexOptions.IgnoreCase | RegexOptions.Singleline);
+      var assetGuids = AssetDatabase.FindAssets("NuGetPackages");
       for (var i = 0; i < assetGuids.Length; i++) {
         var assetPath = AssetDatabase.GUIDToAssetPath(assetGuids[i]);
 
