@@ -43,6 +43,12 @@
       },
       "url": "https://packages.unity.com"
     },
+    "my.package.name": {
+      "version": "file:my.package.name",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {}
+    },
     "com.unity.modules.imgui": {
       "version": "1.0.0",
       "depth": 0,
