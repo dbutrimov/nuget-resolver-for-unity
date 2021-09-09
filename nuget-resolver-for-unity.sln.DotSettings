@@ -1,26 +1,2 @@
 ﻿<wpf:ResourceDictionary xml:space="preserve" xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml" xmlns:s="clr-namespace:System;assembly=mscorlib" xmlns:ss="urn:shemas-jetbrains-com:settings-storage-xaml" xmlns:wpf="http://schemas.microsoft.com/winfx/2006/xaml/presentation">
-	<s:String x:Key="/Default/CodeInspection/CSharpLanguageProject/LanguageLevel/@EntryValue">CSharp73</s:String>
-	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=1373965A_002D7B39_002D2516_002DE65E_002DB9602DFE070C_002Fd_003AAssets_002Fd_003APlugins/@EntryIndexedValue">ExplicitlyExcluded</s:String>
-	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=3C190C87_002D5B53_002DD6E6_002D8A27_002D7ACE87926D6B_002Fd_003AAssets_002Fd_003ADemigiant/@EntryIndexedValue">ExplicitlyExcluded</s:String>
-	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=3C190C87_002D5B53_002DD6E6_002D8A27_002D7ACE87926D6B_002Fd_003AAssets_002Fd_003AFacebookSDK/@EntryIndexedValue">ExplicitlyExcluded</s:String>
-	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=3C190C87_002D5B53_002DD6E6_002D8A27_002D7ACE87926D6B_002Fd_003AAssets_002Fd_003AFirebase/@EntryIndexedValue">ExplicitlyExcluded</s:String>
-	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=3C190C87_002D5B53_002DD6E6_002D8A27_002D7ACE87926D6B_002Fd_003AAssets_002Fd_003AGooglePlayGames/@EntryIndexedValue">ExplicitlyExcluded</s:String>
-	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=3C190C87_002D5B53_002DD6E6_002D8A27_002D7ACE87926D6B_002Fd_003AAssets_002Fd_003AIronSource/@EntryIndexedValue">ExplicitlyExcluded</s:String>
-	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=3C190C87_002D5B53_002DD6E6_002D8A27_002D7ACE87926D6B_002Fd_003AAssets_002Fd_003APaperPlaneTools/@EntryIndexedValue">ExplicitlyExcluded</s:String>
-	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=3C190C87_002D5B53_002DD6E6_002D8A27_002D7ACE87926D6B_002Fd_003AAssets_002Fd_003ASoftMask/@EntryIndexedValue">ExplicitlyExcluded</s:String>
-	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=3C190C87_002D5B53_002DD6E6_002D8A27_002D7ACE87926D6B_002Fd_003AAssets_002Fd_003ATextMesh_0020Pro/@EntryIndexedValue">ExplicitlyExcluded</s:String>
-	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=3C190C87_002D5B53_002DD6E6_002D8A27_002D7ACE87926D6B_002Fd_003AAssets_002Fd_003AUniClipboard/@EntryIndexedValue">ExplicitlyExcluded</s:String>
-	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=3C190C87_002D5B53_002DD6E6_002D8A27_002D7ACE87926D6B_002Fd_003AAssets_002Fd_003AUTNotifications/@EntryIndexedValue">ExplicitlyExcluded</s:String>
-	<s:String x:Key="/Default/CodeInspection/ExcludedFiles/FilesAndFoldersToSkip2/=63B56643_002DEAD0_002D5CEF_002D5F82_002D1714331FC00B_002Fd_003AAssets_002Fd_003APlayServicesResolver/@EntryIndexedValue">ExplicitlyExcluded</s:String>
-	<s:String x:Key="/Default/CodeStyle/Naming/CSharpNaming/PredefinedNamingRules/=PrivateInstanceFields/@EntryIndexedValue">&lt;Policy Inspect="True" Prefix="" Suffix="" Style="aaBb" /&gt;</s:String>
-	<s:String x:Key="/Default/CodeStyle/Naming/CSharpNaming/PredefinedNamingRules/=PrivateStaticFields/@EntryIndexedValue">&lt;Policy Inspect="True" Prefix="" Suffix="" Style="aaBb" /&gt;</s:String>
-	<s:String x:Key="/Default/CodeStyle/FileHeader/FileHeaderText/@EntryValue">Copyright (c) $CURRENT_YEAR$ White Sharx (https://whitesharx.com) - All Rights Reserved.
-Unauthorized copying of this file, via any medium is strictly prohibited.
-Proprietary and confidential.</s:String>
-	<s:Boolean x:Key="/Default/UserDictionary/Words/=Leaderboard/@EntryIndexedValue">True</s:Boolean>
-	<s:Boolean x:Key="/Default/UserDictionary/Words/=Leaderboards/@EntryIndexedValue">True</s:Boolean>
-	<s:Boolean x:Key="/Default/UserDictionary/Words/=Sharx/@EntryIndexedValue">True</s:Boolean>
-	<s:Boolean x:Key="/Default/UserDictionary/Words/=Starfall/@EntryIndexedValue">True</s:Boolean>
-	<s:Boolean x:Key="/Default/UserDictionary/Words/=stockfish/@EntryIndexedValue">True</s:Boolean>
-	<s:Boolean x:Key="/Default/UserDictionary/Words/=tweener/@EntryIndexedValue">True</s:Boolean>
-</wpf:ResourceDictionary>
+	<s:Boolean x:Key="/Default/CodeStyle/Naming/CSharpNaming/ApplyAutoDetectedRules/@EntryValue">False</s:Boolean></wpf:ResourceDictionary>

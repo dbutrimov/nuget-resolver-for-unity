@@ -1,9 +1,6 @@
-// Copyright (c) 2021 White Sharx (https://whitesharx.com) - All Rights Reserved.
-// Unauthorized copying of this file, via any medium is strictly prohibited.
-// Proprietary and confidential.
-
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using NuGet.Common;
@@ -153,6 +150,103 @@ namespace NuGetResolver.Editor {
       }
 
       return null;
+    }
+
+
+    private static NuGetFramework SelectTargetFramework(
+      FrameworkReducer reducer,
+      params NuGetFramework[] frameworks) {
+      var possibleFrameworks = frameworks.Where(x => x != null).ToList();
+      if (possibleFrameworks.Count <= 0) {
+        return null;
+      }
+
+      var framework = possibleFrameworks.First();
+      if (possibleFrameworks.Count == 1) {
+        return framework;
+      }
+
+      possibleFrameworks = possibleFrameworks.Skip(1).ToList();
+      return reducer.GetNearest(framework, possibleFrameworks);
+    }
+
+    private static VersionRange SelectAllowedVersions(params VersionRange[] versions) {
+      VersionRange result = null;
+      foreach (var version in versions) {
+        if (version == null) {
+          continue;
+        }
+
+        if (result == null) {
+          result = version;
+          continue;
+        }
+
+        result = VersionRange.CommonSubSet(new[] { result, version });
+      }
+
+      return result;
+    }
+
+    private static NuGetVersion SelectPreferredVersion(VersionRange versionRange, params NuGetVersion[] versions) {
+      var versionList = versions.Where(x => x != null).OrderBy(x => x).ToList();
+      if (versionRange == null) {
+        return versionList.FirstOrDefault();
+      }
+
+      return versionRange.FindBestMatch(versionList) ?? versionList.FirstOrDefault();
+    }
+
+    private static PackageReference Update(
+      this PackageReference source, PackageReference other, FrameworkReducer frameworkReducer) {
+      var sourceIdentity = source.PackageIdentity;
+      var otherIdentity = other.PackageIdentity;
+      if (!otherIdentity.Equals(sourceIdentity)) {
+        return source;
+      }
+
+      var allowedVersions = SelectAllowedVersions(source.AllowedVersions, other.AllowedVersions);
+      var preferredVersion = SelectPreferredVersion(allowedVersions, sourceIdentity.Version, otherIdentity.Version);
+
+      return new PackageReference(
+        new PackageIdentity(sourceIdentity.Id, preferredVersion),
+        SelectTargetFramework(frameworkReducer, source.TargetFramework, other.TargetFramework),
+        source.IsUserInstalled || other.IsUserInstalled,
+        source.IsDevelopmentDependency && other.IsDevelopmentDependency,
+        source.RequireReinstallation || other.RequireReinstallation,
+        allowedVersions);
+    }
+
+    public static void Update(this ResolveConfig config, ResolveConfig other, FrameworkReducer frameworkReducer) {
+      var packages = config.Packages;
+      foreach (var otherPackage in other.Packages) {
+        var existsIndex = -1;
+        PackageReference existsPackage = null;
+        for (var i = 0; i < packages.Count; i++) {
+          var package = packages[i];
+          if (!package.PackageIdentity.Equals(otherPackage.PackageIdentity)) {
+            continue;
+          }
+
+          existsIndex = i;
+          existsPackage = package;
+          break;
+        }
+
+        if (existsIndex < 0) {
+          packages.Add(otherPackage);
+        } else {
+          packages[existsIndex] = existsPackage.Update(otherPackage, frameworkReducer);
+        }
+      }
+
+      config.Packages = packages;
+
+      config.Ignores.AddRange(other.Ignores);
+    }
+
+    public static bool IsIgnored(this ResolveConfig config, string packageId) {
+      return config.Ignores.Any(x => x.IsMatch(packageId));
     }
   }
 }

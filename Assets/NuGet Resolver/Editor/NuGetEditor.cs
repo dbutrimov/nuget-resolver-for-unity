@@ -1,7 +1,3 @@
-// Copyright (c) 2021 White Sharx (https://whitesharx.com) - All Rights Reserved.
-// Unauthorized copying of this file, via any medium is strictly prohibited.
-// Proprietary and confidential.
-
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -33,16 +29,16 @@ namespace NuGetResolver.Editor {
 
 
     private readonly struct ProgressSegment {
-      private readonly float min;
-      private readonly float max;
+      private readonly float _min;
+      private readonly float _max;
 
       public ProgressSegment(float min, float max) {
-        this.min = min;
-        this.max = max;
+        _min = min;
+        _max = max;
       }
 
       public float Evaluate(float progress) {
-        return min + (max - min) * progress;
+        return _min + (_max - _min) * progress;
       }
     }
 
@@ -67,6 +63,7 @@ namespace NuGetResolver.Editor {
       const DependencyBehavior dependencyBehavior = DependencyBehavior.Highest;
       var targetFramework = NuGetFramework.Parse("netstandard2.0");
       var projectPath = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
+      var tempPath = Path.Combine(projectPath, "Temp");
 
       logger ??= NullLogger.Instance;
 
@@ -75,13 +72,15 @@ namespace NuGetResolver.Editor {
 
       progress?.Report(progressReport);
 
-      var assetsDir = new DirectoryInfo(Path.Combine(projectPath, "Assets"));
-      logger.LogInformation(assetsDir.FullName);
-
+      var configReader = new ResolveConfigReader();
       var resolveConfig = new ResolveConfig();
 
-      var assetNameRegex = new Regex(@"^.+NuGetPackages\.xml$", RegexOptions.IgnoreCase | RegexOptions.Singleline);
-      var assetGuids = AssetDatabase.FindAssets("*NuGetPackages");
+      var frameworkReducer = new FrameworkReducer(
+        DefaultFrameworkNameProvider.Instance,
+        new UnityFrameworkCompatibilityProvider());
+
+      var assetNameRegex = new Regex(@"^.*NuGetPackages\.xml$", RegexOptions.IgnoreCase | RegexOptions.Singleline);
+      var assetGuids = AssetDatabase.FindAssets("NuGetPackages");
       for (var i = 0; i < assetGuids.Length; i++) {
         var assetPath = AssetDatabase.GUIDToAssetPath(assetGuids[i]);
 
@@ -97,8 +96,8 @@ namespace NuGetResolver.Editor {
           logger.LogInformation(assetPath);
 
           using var reader = new StringReader(textAsset.text);
-          var config = await Task.Run(() => ResolveConfig.Read(reader), cancellationToken);
-          resolveConfig.Update(config);
+          var config = await Task.Run(() => configReader.Read(reader), cancellationToken);
+          resolveConfig.Update(config, frameworkReducer);
         }
 
         progressReport.Progress = progressSegment.Evaluate((float)(i + 1) / assetGuids.Length);
@@ -186,7 +185,7 @@ namespace NuGetResolver.Editor {
         .Select(p => availablePackages.Single(x => PackageIdentityComparer.Default.Equals(x, p)))
         .ToList();
 
-      var nugetPath = Path.GetFullPath(".nuget");
+      var nugetPath = Path.Combine(tempPath, "NuGet");
       using var deleteNugetDir = new DeleteDirectoryDisposable(nugetPath);
 
       var packagePathResolver = new PackagePathResolver(nugetPath);
@@ -196,15 +195,11 @@ namespace NuGetResolver.Editor {
         ClientPolicyContext.GetClientPolicy(settings, logger),
         logger);
 
-      var frameworkReducer = new FrameworkReducer(
-        DefaultFrameworkNameProvider.Instance,
-        new UnityFrameworkCompatibilityProvider());
+      var packagesTempPath = Path.Combine(tempPath, $"NuGetResolver-{Guid.NewGuid():N}");
+      using var deleteTempDir = new DeleteDirectoryDisposable(packagesTempPath);
 
-      var tempPath = Path.GetFullPath(Path.Combine(".temp", $"NuGetResolver-{Guid.NewGuid():N}"));
-      using var deleteTempDir = new DeleteDirectoryDisposable(tempPath);
-
-      var tempRuntimeDir = DirectoryUtility.Create(Path.Combine(tempPath, "Runtime"), true);
-      var tempEditorDir = DirectoryUtility.Create(Path.Combine(tempPath, "Editor"), true);
+      var tempRuntimeDir = DirectoryUtility.Create(Path.Combine(packagesTempPath, "Runtime"), true);
+      var tempEditorDir = DirectoryUtility.Create(Path.Combine(packagesTempPath, "Editor"), true);
 
       for (var i = 0; i < packagesToInstall.Count; i++) {
         var packageToInstall = packagesToInstall[i];
