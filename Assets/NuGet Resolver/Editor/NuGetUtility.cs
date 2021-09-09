@@ -155,7 +155,7 @@ namespace NuGetResolver.Editor {
 
     private static NuGetFramework SelectTargetFramework(
       FrameworkReducer reducer,
-      IEnumerable<NuGetFramework> frameworks) {
+      params NuGetFramework[] frameworks) {
       var possibleFrameworks = frameworks.Where(x => x != null).ToList();
       if (possibleFrameworks.Count <= 0) {
         return null;
@@ -170,7 +170,7 @@ namespace NuGetResolver.Editor {
       return reducer.GetNearest(framework, possibleFrameworks);
     }
 
-    private static VersionRange SelectAllowedVersions(IEnumerable<VersionRange> versions) {
+    private static VersionRange SelectAllowedVersions(params VersionRange[] versions) {
       VersionRange result = null;
       foreach (var version in versions) {
         if (version == null) {
@@ -188,20 +188,33 @@ namespace NuGetResolver.Editor {
       return result;
     }
 
+    private static NuGetVersion SelectPreferredVersion(VersionRange versionRange, params NuGetVersion[] versions) {
+      var versionList = versions.Where(x => x != null).OrderBy(x => x).ToList();
+      if (versionRange == null) {
+        return versionList.FirstOrDefault();
+      }
+
+      return versionRange.FindBestMatch(versionList) ?? versionList.FirstOrDefault();
+    }
+
     private static PackageReference Update(
       this PackageReference source, PackageReference other, FrameworkReducer frameworkReducer) {
-      var identity = source.PackageIdentity;
-      if (!other.PackageIdentity.Equals(identity)) {
+      var sourceIdentity = source.PackageIdentity;
+      var otherIdentity = other.PackageIdentity;
+      if (!otherIdentity.Equals(sourceIdentity)) {
         return source;
       }
 
+      var allowedVersions = SelectAllowedVersions(source.AllowedVersions, other.AllowedVersions);
+      var preferredVersion = SelectPreferredVersion(allowedVersions, sourceIdentity.Version, otherIdentity.Version);
+
       return new PackageReference(
-        identity,
-        SelectTargetFramework(frameworkReducer, new[] { source.TargetFramework, other.TargetFramework }),
+        new PackageIdentity(sourceIdentity.Id, preferredVersion),
+        SelectTargetFramework(frameworkReducer, source.TargetFramework, other.TargetFramework),
         source.IsUserInstalled || other.IsUserInstalled,
         source.IsDevelopmentDependency && other.IsDevelopmentDependency,
         source.RequireReinstallation || other.RequireReinstallation,
-        SelectAllowedVersions(new[] { source.AllowedVersions, other.AllowedVersions }));
+        allowedVersions);
     }
 
     public static void Update(this ResolveConfig config, ResolveConfig other, FrameworkReducer frameworkReducer) {
