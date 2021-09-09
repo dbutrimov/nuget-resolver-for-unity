@@ -1,18 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <packages>
-    <ignore id="Microsoft.CSharp" />
-
-    <!-- Runtime packages -->
-    <package id="System.Collections.Immutable" version="1.3.1" allowedVersions="[1.3.1,)" />
     <package id="SuperSocket.ClientEngine.Core" version="0.8.0.12" allowedVersions="[0.8.0.12,)" />
-    <package id="WebSocket4Net" version="0.15.0" allowedVersions="[0.15.0,)" />
-
-    <!-- Ignore packages -->
-    <ignore id="Newtonsoft.Json" />
     <ignore id="System.Linq" />
-    <ignore id="System.Net.NameResolution" />
     <ignore id="System.Net.Sockets" />
+    <ignore id="System.Runtime.Extensions" />
+    <ignore id="System.Runtime.InteropServices" />
+    <ignore id="System.Security.Cryptography.X509Certificates" />
+    <ignore id="System.Net.Security" />
+    <ignore id="System.Net.NameResolution" />
+    <ignore id="System.Collections.Specialized" />
+
+    <package id="WebSocket4Net" version="0.15.0" allowedVersions="[0.15.0,)" />
+    <ignore id="System.Threading.Timer" />
     <ignore id="System.Text.RegularExpressions" />
     <ignore id="System.Threading" />
-    <ignore id="System.Threading.Timer" />
 </packages>

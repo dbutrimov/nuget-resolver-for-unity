@@ -87,14 +87,18 @@ namespace NuGetResolver.Editor {
       return null;
     }
 
-    public static async Task<IEnumerable<PackageReference>> GetDependenciesAsync(
+    public static async Task<TreeNode<PackageReference>> GetDependenciesAsync(
       this SourceRepository repository,
       PackageReference package,
       NuGetFramework targetFramework,
       SourceCacheContext cacheContext,
       ILogger logger,
       ICollection<SourcePackageDependencyInfo> availablePackages,
+      IReadOnlyCollection<IgnoreEntry> ignores,
+      bool ignoreNode,
       CancellationToken cancellationToken = default) {
+      ignoreNode = ignoreNode || (ignores?.Any(x => x.IsMatch(package.PackageIdentity.Id)) ?? false);
+
       var packageFramework = package.TargetFramework ?? targetFramework;
 
       var dependencyInfoResource = await repository.GetResourceAsync<DependencyInfoResource>(cancellationToken);
@@ -107,7 +111,7 @@ namespace NuGetResolver.Editor {
 
       availablePackages.Add(dependencyInfo);
 
-      var result = new List<PackageReference>();
+      var children = new List<TreeNode<PackageReference>>();
       foreach (var dependency in dependencyInfo.Dependencies) {
         var preferredVersion = await repository.GetPreferredVersionAsync(
           dependency.Id, dependency.VersionRange, cacheContext, logger, cancellationToken);
@@ -123,29 +127,32 @@ namespace NuGetResolver.Editor {
           package.RequireReinstallation,
           dependency.VersionRange);
 
-        result.Add(dependencyReference);
+        var child = await repository.GetDependenciesAsync(
+          dependencyReference, targetFramework, cacheContext, logger, availablePackages,
+          ignores, ignoreNode, cancellationToken);
 
-        var dependencies = await repository.GetDependenciesAsync(
-          dependencyReference, targetFramework, cacheContext, logger, availablePackages, cancellationToken);
-        result.AddRange(dependencies);
+        children.Add(child);
       }
 
-      return result;
+      return new TreeNode<PackageReference>(package, ignoreNode, children);
     }
 
-    public static async Task<IEnumerable<PackageReference>> GetDependenciesAsync(
+    public static async Task<TreeNode<PackageReference>> GetDependenciesAsync(
       this IEnumerable<SourceRepository> repositories,
       PackageReference package,
       NuGetFramework targetFramework,
       SourceCacheContext cacheContext,
       ILogger logger,
       ICollection<SourcePackageDependencyInfo> availablePackages,
+      IReadOnlyCollection<IgnoreEntry> ignores,
       CancellationToken cancellationToken = default) {
       foreach (var repository in repositories) {
-        var dependencies = await repository.GetDependenciesAsync(
-          package, targetFramework, cacheContext, logger, availablePackages, cancellationToken);
-        if (dependencies != null) {
-          return dependencies;
+        var result = await repository.GetDependenciesAsync(
+          package, targetFramework, cacheContext, logger, availablePackages,
+          ignores, false, cancellationToken);
+
+        if (result != null) {
+          return result;
         }
       }
 
@@ -201,7 +208,7 @@ namespace NuGetResolver.Editor {
       this PackageReference source, PackageReference other, FrameworkReducer frameworkReducer) {
       var sourceIdentity = source.PackageIdentity;
       var otherIdentity = other.PackageIdentity;
-      if (!otherIdentity.Equals(sourceIdentity)) {
+      if (!PackageIdComparer.Equals(sourceIdentity.Id, otherIdentity.Id)) {
         return source;
       }
 
@@ -224,7 +231,7 @@ namespace NuGetResolver.Editor {
         PackageReference existsPackage = null;
         for (var i = 0; i < packages.Count; i++) {
           var package = packages[i];
-          if (!package.PackageIdentity.Equals(otherPackage.PackageIdentity)) {
+          if (!PackageIdComparer.Equals(package.PackageIdentity.Id, otherPackage.PackageIdentity.Id)) {
             continue;
           }
 
@@ -243,10 +250,6 @@ namespace NuGetResolver.Editor {
       config.Packages = packages;
 
       config.Ignores.AddRange(other.Ignores);
-    }
-
-    public static bool IsIgnored(this ResolveConfig config, string packageId) {
-      return config.Ignores.Any(x => x.IsMatch(packageId));
     }
   }
 }
