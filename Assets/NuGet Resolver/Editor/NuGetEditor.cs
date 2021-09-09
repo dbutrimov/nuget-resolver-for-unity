@@ -75,6 +75,10 @@ namespace NuGetResolver.Editor {
       var configReader = new ResolveConfigReader();
       var resolveConfig = new ResolveConfig();
 
+      var frameworkReducer = new FrameworkReducer(
+        DefaultFrameworkNameProvider.Instance,
+        new UnityFrameworkCompatibilityProvider());
+
       var assetNameRegex = new Regex(@"^.*NuGetPackages\.xml$", RegexOptions.IgnoreCase | RegexOptions.Singleline);
       var assetGuids = AssetDatabase.FindAssets("NuGetPackages");
       for (var i = 0; i < assetGuids.Length; i++) {
@@ -93,7 +97,7 @@ namespace NuGetResolver.Editor {
 
           using var reader = new StringReader(textAsset.text);
           var config = await Task.Run(() => configReader.Read(reader), cancellationToken);
-          resolveConfig.Update(config);
+          resolveConfig.Update(config, frameworkReducer);
         }
 
         progressReport.Progress = progressSegment.Evaluate((float)(i + 1) / assetGuids.Length);
@@ -190,10 +194,6 @@ namespace NuGetResolver.Editor {
         XmlDocFileSaveMode.None,
         ClientPolicyContext.GetClientPolicy(settings, logger),
         logger);
-
-      var frameworkReducer = new FrameworkReducer(
-        DefaultFrameworkNameProvider.Instance,
-        new UnityFrameworkCompatibilityProvider());
 
       var packagesTempPath = Path.Combine(tempPath, $"NuGetResolver-{Guid.NewGuid():N}");
       using var deleteTempDir = new DeleteDirectoryDisposable(packagesTempPath);

@@ -153,8 +153,82 @@ namespace NuGetResolver.Editor {
     }
 
 
-    public static void Update(this ResolveConfig config, ResolveConfig other) {
-      config.Packages.AddRange(other.Packages);
+    private static NuGetFramework SelectTargetFramework(
+      FrameworkReducer reducer,
+      IEnumerable<NuGetFramework> frameworks) {
+      var possibleFrameworks = frameworks.Where(x => x != null).ToList();
+      if (possibleFrameworks.Count <= 0) {
+        return null;
+      }
+
+      var framework = possibleFrameworks.First();
+      if (possibleFrameworks.Count == 1) {
+        return framework;
+      }
+
+      possibleFrameworks = possibleFrameworks.Skip(1).ToList();
+      return reducer.GetNearest(framework, possibleFrameworks);
+    }
+
+    private static VersionRange SelectAllowedVersions(IEnumerable<VersionRange> versions) {
+      VersionRange result = null;
+      foreach (var version in versions) {
+        if (version == null) {
+          continue;
+        }
+
+        if (result == null) {
+          result = version;
+          continue;
+        }
+
+        result = VersionRange.CommonSubSet(new[] { result, version });
+      }
+
+      return result;
+    }
+
+    private static PackageReference Update(
+      this PackageReference source, PackageReference other, FrameworkReducer frameworkReducer) {
+      var identity = source.PackageIdentity;
+      if (!other.PackageIdentity.Equals(identity)) {
+        return source;
+      }
+
+      return new PackageReference(
+        identity,
+        SelectTargetFramework(frameworkReducer, new[] { source.TargetFramework, other.TargetFramework }),
+        source.IsUserInstalled || other.IsUserInstalled,
+        source.IsDevelopmentDependency && other.IsDevelopmentDependency,
+        source.RequireReinstallation || other.RequireReinstallation,
+        SelectAllowedVersions(new[] { source.AllowedVersions, other.AllowedVersions }));
+    }
+
+    public static void Update(this ResolveConfig config, ResolveConfig other, FrameworkReducer frameworkReducer) {
+      var packages = config.Packages;
+      foreach (var otherPackage in other.Packages) {
+        var existsIndex = -1;
+        PackageReference existsPackage = null;
+        for (var i = 0; i < packages.Count; i++) {
+          var package = packages[i];
+          if (!package.PackageIdentity.Equals(otherPackage.PackageIdentity)) {
+            continue;
+          }
+
+          existsIndex = i;
+          existsPackage = package;
+          break;
+        }
+
+        if (existsIndex < 0) {
+          packages.Add(otherPackage);
+        } else {
+          packages[existsIndex] = existsPackage.Update(otherPackage, frameworkReducer);
+        }
+      }
+
+      config.Packages = packages;
+
       config.Ignores.AddRange(other.Ignores);
     }
 

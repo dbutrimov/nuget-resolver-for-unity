@@ -20,16 +20,16 @@ namespace NuGetResolver.Editor {
   }
 
   internal sealed class ResolveConfig {
-    private ISet<PackageReference> packages;
-    private ISet<IgnoreEntry> ignores;
+    private IList<PackageReference> packages;
+    private IList<IgnoreEntry> ignores;
 
-    public ISet<PackageReference> Packages {
-      get => packages ?? (packages = new HashSet<PackageReference>());
+    public IList<PackageReference> Packages {
+      get => packages ??= new List<PackageReference>();
       set => packages = value;
     }
 
-    public ISet<IgnoreEntry> Ignores {
-      get => ignores ?? (ignores = new HashSet<IgnoreEntry>());
+    public IList<IgnoreEntry> Ignores {
+      get => ignores ??= new List<IgnoreEntry>();
       set => ignores = value;
     }
   }
