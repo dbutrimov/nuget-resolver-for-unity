@@ -122,7 +122,7 @@ namespace NuGetResolver.Editor {
 
 
       var preferredVersions = new HashSet<PackageIdentity>(PackageIdentityComparer.Default);
-      var references = new List<PackageReference>();
+      var references = new List<TreeNode<PackageReference>>();
 
       var packageNumber = 0;
       foreach (var targetPackage in targetPackages) {
@@ -148,20 +148,30 @@ namespace NuGetResolver.Editor {
 
         var packageReference = new PackageReference(
           preferredVersion,
-          targetPackage.TargetFramework,
+          targetPackage.TargetFramework ?? targetFramework,
           targetPackage.IsUserInstalled,
           targetPackage.IsDevelopmentDependency,
           targetPackage.RequireReinstallation,
           targetPackage.AllowedVersions);
 
         preferredVersions.Add(preferredVersion);
-        references.Add(packageReference);
 
-        var dependencies = await repositories.GetDependenciesAsync(
+        var node = await repositories.GetDependenciesAsync(
           packageReference, targetFramework, cacheContext, logger,
-          availablePackages, cancellationToken);
-        references.AddRange(dependencies);
+          availablePackages, resolveConfig.Ignores.ToList(), cancellationToken);
+
+        if (node != null) {
+          references.Add(node);
+        }
       }
+
+      using (var writer = File.CreateText(Path.GetFullPath(Path.Combine(tempPath, "NuGetPackages.txt")))) {
+        foreach (var node in references) {
+          node.Print(writer);
+        }
+      }
+
+      var referencesList = references.SelectMany(node => node.ToDepthEnumerable()).ToList();
 
 
       progressSegment = new ProgressSegment(0.7f, 0.9f);
@@ -173,8 +183,8 @@ namespace NuGetResolver.Editor {
       var resolverContext = new PackageResolverContext(
         dependencyBehavior,
         targetIds,
-        targetIds,
-        references,
+        Enumerable.Empty<string>(),
+        referencesList.Select(node => node.Value),
         preferredVersions,
         availablePackages,
         repositories.Select(x => x.PackageSource),
@@ -182,6 +192,7 @@ namespace NuGetResolver.Editor {
 
       var resolver = new PackageResolver();
       var packagesToInstall = resolver.Resolve(resolverContext, cancellationToken)
+        .Where(p => referencesList.Any(r => !r.Ignore && StringComparer.OrdinalIgnoreCase.Equals(r.Value.PackageIdentity.Id, p.Id)))
         .Select(p => availablePackages.Single(x => PackageIdentityComparer.Default.Equals(x, p)))
         .ToList();
 
@@ -207,11 +218,6 @@ namespace NuGetResolver.Editor {
         progressReport.Info = $"Install packages ({i + 1}/{packagesToInstall.Count}): {packageToInstall.Id}";
         progressReport.Progress = progressSegment.Evaluate((float)i / packagesToInstall.Count);
         progress?.Report(progressReport);
-
-        if (resolveConfig.IsIgnored(packageToInstall.Id)) {
-          logger.LogInformation($"Ignore {packageToInstall.Id}");
-          continue;
-        }
 
         PackageReaderBase packageReader;
         var installedPath = packagePathResolver.GetInstalledPath(packageToInstall);
@@ -245,7 +251,7 @@ namespace NuGetResolver.Editor {
           .Where(x => x.TargetFramework.Equals(nearestFramework))
           .SelectMany(x => x.Items);
 
-        var isDevelopmentDependency = references.IsDevelopmentDependency(packageIdentity.Id);
+        var isDevelopmentDependency = referencesList.Select(node => node.Value).IsDevelopmentDependency(packageIdentity.Id);
         var tempDir = isDevelopmentDependency ? tempEditorDir : tempRuntimeDir;
         var tempPackagePath = Path.Combine(tempDir.FullName, packageIdentity.ToString());
 
