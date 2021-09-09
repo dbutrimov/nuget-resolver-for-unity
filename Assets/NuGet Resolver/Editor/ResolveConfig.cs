@@ -4,33 +4,33 @@ using NuGet.Packaging;
 
 namespace NuGetResolver.Editor {
   internal sealed class IgnoreEntry {
-    private readonly Regex regex;
+    private readonly Regex _regex;
 
     public IgnoreEntry(string pattern) {
       pattern = Regex.Escape(pattern);
       pattern = Regex.Replace(pattern, @"\\\*", ".*");
       pattern = $"^{pattern}$";
 
-      regex = new Regex(pattern, RegexOptions.Singleline | RegexOptions.IgnoreCase);
+      _regex = new Regex(pattern, RegexOptions.Singleline | RegexOptions.IgnoreCase);
     }
 
     public bool IsMatch(string packageId) {
-      return regex.IsMatch(packageId);
+      return _regex.IsMatch(packageId);
     }
   }
 
   internal sealed class ResolveConfig {
-    private IList<PackageReference> packages;
-    private IList<IgnoreEntry> ignores;
+    private IList<PackageReference> _packages;
+    private IList<IgnoreEntry> _ignores;
 
     public IList<PackageReference> Packages {
-      get => packages ??= new List<PackageReference>();
-      set => packages = value;
+      get => _packages ??= new List<PackageReference>();
+      set => _packages = value;
     }
 
     public IList<IgnoreEntry> Ignores {
-      get => ignores ??= new List<IgnoreEntry>();
-      set => ignores = value;
+      get => _ignores ??= new List<IgnoreEntry>();
+      set => _ignores = value;
     }
   }
 }

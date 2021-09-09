@@ -6,7 +6,7 @@ using ILogger = NuGet.Common.ILogger;
 
 namespace NuGetResolver.Editor {
   internal sealed class UnityNuGetLogger : ILogger {
-    private const string Prefix = "<color=lightblue><b>NuGet</b></color>: ";
+    private const string Prefix = "<color=lightblue><b>NuGet\u003E</b></color> ";
 
     public static readonly ILogger Instance = new UnityNuGetLogger();
 

@@ -29,16 +29,16 @@ namespace NuGetResolver.Editor {
 
 
     private readonly struct ProgressSegment {
-      private readonly float min;
-      private readonly float max;
+      private readonly float _min;
+      private readonly float _max;
 
       public ProgressSegment(float min, float max) {
-        this.min = min;
-        this.max = max;
+        _min = min;
+        _max = max;
       }
 
       public float Evaluate(float progress) {
-        return min + (max - min) * progress;
+        return _min + (_max - _min) * progress;
       }
     }
 

@@ -4,19 +4,19 @@ using System.Threading;
 
 namespace NuGetResolver.Editor {
   internal sealed class DeleteDirectoryDisposable : IDisposable {
-    private readonly string path;
-    private int disposeCallCount = -1;
+    private readonly string _path;
+    private int _disposeCallCount = -1;
 
     public DeleteDirectoryDisposable(string path) {
-      this.path = path;
+      _path = path;
     }
 
     public void Dispose() {
-      if (Interlocked.Increment(ref disposeCallCount) > 0) {
+      if (Interlocked.Increment(ref _disposeCallCount) > 0) {
         return;
       }
 
-      Directory.Delete(path, true);
+      Directory.Delete(_path, true);
     }
   }
 }
