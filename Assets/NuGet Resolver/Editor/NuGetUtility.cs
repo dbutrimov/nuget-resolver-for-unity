@@ -204,34 +204,35 @@ namespace NuGetResolver.Editor {
       return versionRange.FindBestMatch(versionList) ?? versionList.FirstOrDefault();
     }
 
-    private static PackageReference Update(
-      this PackageReference source, PackageReference other, FrameworkReducer frameworkReducer) {
-      var sourceIdentity = source.PackageIdentity;
-      var otherIdentity = other.PackageIdentity;
-      if (!PackageIdComparer.Equals(sourceIdentity.Id, otherIdentity.Id)) {
+    private static PackageEntry Merge(
+      this PackageEntry source, PackageEntry other, FrameworkReducer frameworkReducer) {
+      if (!PackageIdComparer.Equals(source.Id, other.Id)) {
         return source;
       }
 
       var allowedVersions = SelectAllowedVersions(source.AllowedVersions, other.AllowedVersions);
-      var preferredVersion = SelectPreferredVersion(allowedVersions, sourceIdentity.Version, otherIdentity.Version);
 
-      return new PackageReference(
-        new PackageIdentity(sourceIdentity.Id, preferredVersion),
+      var ignores = new List<IgnoreEntry>();
+      ignores.AddRange(source.Ignores);
+      ignores.AddRange(other.Ignores);
+
+      return new PackageEntry(
+        source.Id,
+        SelectPreferredVersion(allowedVersions, source.Version, other.Version),
         SelectTargetFramework(frameworkReducer, source.TargetFramework, other.TargetFramework),
-        source.IsUserInstalled || other.IsUserInstalled,
         source.IsDevelopmentDependency && other.IsDevelopmentDependency,
-        source.RequireReinstallation || other.RequireReinstallation,
-        allowedVersions);
+        allowedVersions,
+        ignores);
     }
 
-    public static void Update(this ResolveConfig config, ResolveConfig other, FrameworkReducer frameworkReducer) {
-      var packages = config.Packages;
+    public static ResolveConfig Merge(this ResolveConfig config, ResolveConfig other, FrameworkReducer frameworkReducer) {
+      var packages = new List<PackageEntry>(config.Packages);
       foreach (var otherPackage in other.Packages) {
         var existsIndex = -1;
-        PackageReference existsPackage = null;
+        PackageEntry existsPackage = null;
         for (var i = 0; i < packages.Count; i++) {
           var package = packages[i];
-          if (!PackageIdComparer.Equals(package.PackageIdentity.Id, otherPackage.PackageIdentity.Id)) {
+          if (!PackageIdComparer.Equals(package.Id, otherPackage.Id)) {
             continue;
           }
 
@@ -243,13 +244,14 @@ namespace NuGetResolver.Editor {
         if (existsIndex < 0) {
           packages.Add(otherPackage);
         } else {
-          packages[existsIndex] = existsPackage.Update(otherPackage, frameworkReducer);
+          packages[existsIndex] = existsPackage.Merge(otherPackage, frameworkReducer);
         }
       }
 
-      config.Packages = packages;
+      var ignores = new List<IgnoreEntry>(config.Ignores);
+      ignores.AddRange(other.Ignores);
 
-      config.Ignores.AddRange(other.Ignores);
+      return new ResolveConfig(packages, ignores);
     }
   }
 }

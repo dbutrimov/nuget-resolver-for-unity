@@ -9,6 +9,9 @@ namespace NuGetResolver.Editor {
       }
 
       writer.WriteLine(node);
+      if (node.Ignore) {
+        return;
+      }
 
       foreach (var child in node.Children) {
         child.Print(writer, depth + 1);

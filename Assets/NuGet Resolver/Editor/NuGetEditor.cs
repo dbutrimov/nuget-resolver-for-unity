@@ -97,7 +97,7 @@ namespace NuGetResolver.Editor {
 
           using var reader = new StringReader(textAsset.text);
           var config = await Task.Run(() => configReader.Read(reader), cancellationToken);
-          resolveConfig.Update(config, frameworkReducer);
+          resolveConfig = resolveConfig.Merge(config, frameworkReducer);
         }
 
         progressReport.Progress = progressSegment.Evaluate((float)(i + 1) / assetGuids.Length);
@@ -128,7 +128,7 @@ namespace NuGetResolver.Editor {
       foreach (var targetPackage in targetPackages) {
         packageNumber++;
 
-        var packageIdentity = targetPackage.PackageIdentity;
+        var packageIdentity = new PackageIdentity(targetPackage.Id, targetPackage.Version);
 
         progressReport.Info = $"Read dependencies ({packageNumber}/{targetPackages.Count}): {packageIdentity.Id}";
         progressReport.Progress = progressSegment.Evaluate((float)(packageNumber - 1) / targetPackages.Count);
@@ -149,16 +149,19 @@ namespace NuGetResolver.Editor {
         var packageReference = new PackageReference(
           preferredVersion,
           targetPackage.TargetFramework ?? targetFramework,
-          targetPackage.IsUserInstalled,
+          true,
           targetPackage.IsDevelopmentDependency,
-          targetPackage.RequireReinstallation,
+          false,
           targetPackage.AllowedVersions);
 
         preferredVersions.Add(preferredVersion);
 
+        var ignores = new List<IgnoreEntry>(resolveConfig.Ignores);
+        ignores.AddRange(targetPackage.Ignores);
+
         var node = await repositories.GetDependenciesAsync(
           packageReference, targetFramework, cacheContext, logger,
-          availablePackages, resolveConfig.Ignores.ToList(), cancellationToken);
+          availablePackages, ignores, cancellationToken);
 
         if (node != null) {
           references.Add(node);
@@ -173,13 +176,12 @@ namespace NuGetResolver.Editor {
 
       var referencesList = references.SelectMany(node => node.ToDepthEnumerable()).ToList();
 
-
       progressSegment = new ProgressSegment(0.7f, 0.9f);
       progressReport.Info = "Resolve packages...";
       progressReport.Progress = progressSegment.Evaluate(0);
       progress?.Report(progressReport);
 
-      var targetIds = targetPackages.Select(x => x.PackageIdentity.Id).ToList();
+      var targetIds = targetPackages.Select(x => x.Id).ToList();
       var resolverContext = new PackageResolverContext(
         dependencyBehavior,
         targetIds,
@@ -298,7 +300,7 @@ namespace NuGetResolver.Editor {
     }
 
 
-    [MenuItem("Assets/NuGet Resolver/Resolve")]
+    [MenuItem("NuGet/Resolve")]
     public static async void Resolve() {
       const string title = "Resolve NuGet packages";
       var logger = UnityNuGetLogger.Instance;
