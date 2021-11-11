@@ -1,17 +1,27 @@
 <?xml version="1.0" encoding="utf-8"?>
 <packages>
-    <package id="SuperSocket.ClientEngine.Core" version="0.8.0.12" allowedVersions="[0.8.0.12,)" />
-    <ignore id="System.Linq" />
-    <ignore id="System.Net.Sockets" />
-    <ignore id="System.Runtime.Extensions" />
-    <ignore id="System.Runtime.InteropServices" />
-    <ignore id="System.Security.Cryptography.X509Certificates" />
-    <ignore id="System.Net.Security" />
-    <ignore id="System.Net.NameResolution" />
-    <ignore id="System.Collections.Specialized" />
+    <package id="SuperSocket.ClientEngine.Core" version="0.8.0.12" allowedVersions="[0.8.0.12,)">
+        <ignore id="System.Linq" />
+        <ignore id="System.Net.Sockets" />
+        <ignore id="System.Runtime.Extensions" />
+        <ignore id="System.Runtime.InteropServices" />
+        <ignore id="System.Security.Cryptography.X509Certificates" />
+        <ignore id="System.Net.Security" />
+        <ignore id="System.Net.NameResolution" />
+        <ignore id="System.Collections.Specialized" />
+    </package>
 
-    <package id="WebSocket4Net" version="0.15.0" allowedVersions="[0.15.0,)" />
-    <ignore id="System.Threading.Timer" />
-    <ignore id="System.Text.RegularExpressions" />
-    <ignore id="System.Threading" />
+    <package id="WebSocket4Net" version="0.15.0" allowedVersions="[0.15.0,)">
+        <ignore id="System.Linq" />
+        <ignore id="System.Net.Sockets" />
+        <ignore id="System.Runtime.Extensions" />
+        <ignore id="System.Runtime.InteropServices" />
+        <ignore id="System.Security.Cryptography.X509Certificates" />
+        <ignore id="System.Net.Security" />
+        <ignore id="System.Net.NameResolution" />
+        <ignore id="System.Collections.Specialized" />
+        <ignore id="System.Threading.Timer" />
+        <ignore id="System.Text.RegularExpressions" />
+        <ignore id="System.Threading" />
+    </package>
 </packages>

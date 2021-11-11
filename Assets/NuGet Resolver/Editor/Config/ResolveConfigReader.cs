@@ -1,15 +1,24 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Xml;
 using NuGet.Frameworks;
-using NuGet.Packaging;
-using NuGet.Packaging.Core;
 using NuGet.Versioning;
 
 namespace NuGetResolver.Editor {
   internal sealed class ResolveConfigReader {
-    private static PackageReference ReadPackage(XmlNode node) {
+    private static IgnoreEntry ReadIgnore(XmlNode node) {
+      var attributes = node.Attributes;
+      if (attributes == null) {
+        throw new ArgumentException();
+      }
+
+      var pattern = attributes.GetNamedItem("id").Value;
+      return new IgnoreEntry(pattern);
+    }
+
+    private static PackageEntry ReadPackage(XmlNode node) {
       var attributes = node.Attributes;
       if (attributes == null) {
         throw new ArgumentException();
@@ -41,39 +50,40 @@ namespace NuGetResolver.Editor {
         developmentDependency = bool.Parse(developmentDependencyNode.Value);
       }
 
-      return new PackageReference(
-        new PackageIdentity(packageId, version),
-        targetFramework,
-        true,
-        developmentDependency,
-        false,
-        allowedVersions);
-    }
-
-    private static IgnoreEntry ReadIgnore(XmlNode node) {
-      var attributes = node.Attributes;
-      if (attributes == null) {
-        throw new ArgumentException();
-      }
-
-      var pattern = attributes.GetNamedItem("id").Value;
-      return new IgnoreEntry(pattern);
-    }
-
-    private static ResolveConfig Read(XmlNode node) {
-      var config = new ResolveConfig();
+      var ignores = new List<IgnoreEntry>();
       foreach (XmlNode childNode in node.ChildNodes) {
         switch (childNode.Name) {
-          case "package":
-            config.Packages.Add(ReadPackage(childNode));
-            break;
           case "ignore":
-            config.Ignores.Add(ReadIgnore(childNode));
+            ignores.Add(ReadIgnore(childNode));
             break;
         }
       }
 
-      return config;
+      return new PackageEntry(
+        packageId,
+        version,
+        targetFramework,
+        developmentDependency,
+        allowedVersions,
+        ignores);
+    }
+
+    private static ResolveConfig Read(XmlNode node) {
+      var packages = new List<PackageEntry>();
+      var ignores = new List<IgnoreEntry>();
+
+      foreach (XmlNode childNode in node.ChildNodes) {
+        switch (childNode.Name) {
+          case "package":
+            packages.Add(ReadPackage(childNode));
+            break;
+          case "ignore":
+            ignores.Add(ReadIgnore(childNode));
+            break;
+        }
+      }
+
+      return new ResolveConfig(packages, ignores);
     }
 
     private static ResolveConfig Read(XmlReader reader) {

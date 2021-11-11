@@ -1,6 +1,4 @@
-using System.Collections.Generic;
 using System.Text.RegularExpressions;
-using NuGet.Packaging;
 
 namespace NuGetResolver.Editor {
   internal sealed class IgnoreEntry {
@@ -16,21 +14,6 @@ namespace NuGetResolver.Editor {
 
     public bool IsMatch(string packageId) {
       return _regex.IsMatch(packageId);
-    }
-  }
-
-  internal sealed class ResolveConfig {
-    private IList<PackageReference> _packages;
-    private IList<IgnoreEntry> _ignores;
-
-    public IList<PackageReference> Packages {
-      get => _packages ??= new List<PackageReference>();
-      set => _packages = value;
-    }
-
-    public IList<IgnoreEntry> Ignores {
-      get => _ignores ??= new List<IgnoreEntry>();
-      set => _ignores = value;
     }
   }
 }
