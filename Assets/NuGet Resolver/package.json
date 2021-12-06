@@ -1,6 +1,10 @@
 {
   "name": "com.whitesharx.nugetresolver",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "displayName": "NuGet Resolver for Unity",
-  "description": "Resolve NuGet packages in Unity projects"
+  "description": "Resolve NuGet packages in Unity projects",
+  "dependencies": {
+    "com.unity.modules.uielements": "1.0.0"
+  },
+  "type": "tool"
 }

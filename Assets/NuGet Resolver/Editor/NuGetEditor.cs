@@ -61,7 +61,15 @@ namespace NuGetResolver.Editor {
       ILogger logger = null,
       CancellationToken cancellationToken = default) {
       const DependencyBehavior dependencyBehavior = DependencyBehavior.Highest;
-      var targetFramework = NuGetFramework.Parse("netstandard2.0");
+
+      var buildTargetGroup = BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget);
+      var apiCompatibilityLevel = PlayerSettings.GetApiCompatibilityLevel(buildTargetGroup);
+      var targetFramework = apiCompatibilityLevel switch {
+        ApiCompatibilityLevel.NET_Standard_2_0 => NuGetFramework.Parse("netstandard2.0"),
+        ApiCompatibilityLevel.NET_4_6 => NuGetFramework.Parse("net46"),
+        _ => throw new InvalidOperationException($"Unsupported API Compatibility Level: {apiCompatibilityLevel}")
+      };
+
       var projectPath = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
       var tempPath = Path.Combine(projectPath, "Temp");
 
@@ -286,14 +294,18 @@ namespace NuGetResolver.Editor {
   ""displayName"": ""NuGet Packages""
 }}";
 
-      var packageFilePath = Path.Combine(packageDir.FullName, "package.json");
-      File.WriteAllText(packageFilePath, packageFileContent, new UTF8Encoding(false));
+      await Task.Run(
+        () => {
+          var packageFilePath = Path.Combine(packageDir.FullName, "package.json");
+          File.WriteAllText(packageFilePath, packageFileContent, new UTF8Encoding(false));
 
-      var runtimeDir = DirectoryUtility.Create(Path.Combine(projectPath, PackageRuntimePath), true);
-      tempRuntimeDir.CopyTo(runtimeDir.FullName, true);
+          var runtimeDir = DirectoryUtility.Create(Path.Combine(projectPath, PackageRuntimePath), true);
+          tempRuntimeDir.CopyTo(runtimeDir.FullName, true);
 
-      var editorDir = DirectoryUtility.Create(Path.Combine(projectPath, PackageEditorPath), true);
-      tempEditorDir.CopyTo(editorDir.FullName, true);
+          var editorDir = DirectoryUtility.Create(Path.Combine(projectPath, PackageEditorPath), true);
+          tempEditorDir.CopyTo(editorDir.FullName, true);
+        },
+        cancellationToken);
 
       assetsLock.Dispose();
       AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
@@ -303,28 +315,19 @@ namespace NuGetResolver.Editor {
     [MenuItem("NuGet/Resolve")]
     public static async void Resolve() {
       const string title = "Resolve NuGet packages";
-      var logger = UnityNuGetLogger.Instance;
+      var logger = UnityNuGetLogger.Default;
 
       using var cts = new CancellationTokenSource();
-      var progressDialog = new ProgressDialog(
-        title,
-        new ProgressReport { Progress = 0, Info = "Prepare..." },
-        cts);
 
-      var progress = new Progress<ProgressReport>(progressDialog.Update);
+      var cancel = new CancellationDisposable(cts);
+      using var progressWindow = ProgressWindow.Show(title, cancel);
 
       try {
-        await ResolveAsync(progress, logger, cts.Token);
+        await ResolveAsync(progressWindow, logger, cts.Token);
       } catch (Exception ex) {
         logger.LogError(ex.ToString());
-
-        progressDialog.Dispose();
-        EditorUtility.DisplayDialog(title, $"Error: {ex.Message}", "OK");
         throw;
       }
-
-      progressDialog.Dispose();
-      EditorUtility.DisplayDialog(title, "Successfully completed!", "OK");
     }
   }
 }
