@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using UnityEditor;
 using UnityEditor.UIElements;
 using UnityEngine;
@@ -38,11 +39,11 @@ namespace NuGetResolver.Editor {
       var root = rootVisualElement;
 
       var styleSheet = AssetDatabase.LoadAssetAtPath<StyleSheet>(
-        "Assets/NuGet Resolver/Editor/Content/Stylesheets/ResolveEditorWindow.uss");
+        Path.Combine(Package.BasePath, "Editor/Content/Stylesheets/ResolveEditorWindow.uss"));
       root.styleSheets.Add(styleSheet);
 
       var visualTree = AssetDatabase.LoadAssetAtPath<VisualTreeAsset>(
-        "Assets/NuGet Resolver/Editor/Content/Templates/ResolveEditorWindow.uxml");
+        Path.Combine(Package.BasePath, "Editor/Content/Templates/ResolveEditorWindow.uxml"));
       var container = visualTree.Instantiate();
 
       container.AddToClassList("root");
