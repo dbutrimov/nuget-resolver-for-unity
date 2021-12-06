@@ -10,7 +10,7 @@ Resolve NuGet packages in Unity projects
 Add NuGet Resolver to your project via Unity Package Manager (UPM)
 
 ```
-https://github.com/dbutrimov/nuget-resolver-for-unity.git?path=Assets/NuGet%20Resolver
+https://github.com/dbutrimov/nuget-resolver-for-unity.git?path=Packages/com.whitesharx.nugetresolver
 ```
 
 ### Configure NuGet
@@ -47,7 +47,7 @@ Place `*NuGetPackages.xml` file somewhere in the `Assets` directory of the proje
 
 ### Resolve packages
 
-Just click `Assets -> NuGet Resolver -> Resolve` and be happy! 😎
+Just click `NuGet -> Resolve` and be happy! 😎
 
 
 # License
