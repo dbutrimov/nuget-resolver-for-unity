@@ -8,10 +8,10 @@ namespace NuGetResolver.Editor {
   internal sealed class UnityNuGetLogger : LoggerBase {
     private const string Prefix = "<color=lightblue><b>NuGet\u003E</b></color> ";
 
-    public static readonly ILogger Instance = new UnityNuGetLogger();
+    public static readonly ILogger Default = new UnityNuGetLogger();
 
 
-    public UnityNuGetLogger(LogLevel verbosityLevel = LogLevel.Debug) : base(verbosityLevel) {
+    public UnityNuGetLogger(LogLevel verbosityLevel = LogLevel.Minimal) : base(verbosityLevel) {
     }
 
     private static string FormatMessage(ILogMessage message) {
