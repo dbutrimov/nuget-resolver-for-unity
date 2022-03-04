@@ -27,6 +27,7 @@ namespace NuGetResolver.Editor {
       }
 
       pluginImporter.SetValidateReferences(false);
+      EditorUtility.SetDirty(pluginImporter);
     }
   }
 }
