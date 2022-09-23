@@ -87,18 +87,15 @@ namespace NuGetResolver.Editor {
       return null;
     }
 
-    public static async Task<TreeNode<PackageReference>> GetDependenciesAsync(
+    public static async Task<IList<PackageReference>> GetDependenciesAsync(
       this SourceRepository repository,
       PackageReference package,
       NuGetFramework targetFramework,
       SourceCacheContext cacheContext,
-      ILogger logger,
       ICollection<SourcePackageDependencyInfo> availablePackages,
-      IReadOnlyCollection<IgnoreEntry> ignores,
-      bool ignoreNode,
+      IEnumerable<IgnoreEntry> ignores,
+      ILogger logger,
       CancellationToken cancellationToken = default) {
-      ignoreNode = ignoreNode || (ignores?.Any(x => x.IsMatch(package.PackageIdentity.Id)) ?? false);
-
       var packageFramework = package.TargetFramework ?? targetFramework;
 
       var dependencyInfoResource = await repository.GetResourceAsync<DependencyInfoResource>(cancellationToken);
@@ -111,7 +108,7 @@ namespace NuGetResolver.Editor {
 
       availablePackages.Add(dependencyInfo);
 
-      var children = new List<TreeNode<PackageReference>>();
+      var dependencies = new List<PackageReference>();
       foreach (var dependency in dependencyInfo.Dependencies) {
         var preferredVersion = await repository.GetPreferredVersionAsync(
           dependency.Id, dependency.VersionRange, cacheContext, logger, cancellationToken);
@@ -127,29 +124,36 @@ namespace NuGetResolver.Editor {
           package.RequireReinstallation,
           dependency.VersionRange);
 
-        var child = await repository.GetDependenciesAsync(
-          dependencyReference, targetFramework, cacheContext, logger, availablePackages,
-          ignores, ignoreNode, cancellationToken);
+        var childDependencies = await repository.GetDependenciesAsync(
+          dependencyReference, targetFramework, cacheContext, availablePackages, ignores,
+          logger, cancellationToken);
 
-        children.Add(child);
+        if (ignores?.Any(i => i.IsMatch(dependency.Id)) ?? false) {
+          continue;
+        }
+
+        dependencies.Add(dependencyReference);
+        if (childDependencies != null) {
+          dependencies.AddRange(childDependencies);
+        }
       }
 
-      return new TreeNode<PackageReference>(package, ignoreNode, children);
+      return dependencies;
     }
 
-    public static async Task<TreeNode<PackageReference>> GetDependenciesAsync(
+    public static async Task<IList<PackageReference>> GetDependenciesAsync(
       this IEnumerable<SourceRepository> repositories,
       PackageReference package,
       NuGetFramework targetFramework,
       SourceCacheContext cacheContext,
-      ILogger logger,
       ICollection<SourcePackageDependencyInfo> availablePackages,
-      IReadOnlyCollection<IgnoreEntry> ignores,
+      IEnumerable<IgnoreEntry> ignores,
+      ILogger logger,
       CancellationToken cancellationToken = default) {
       foreach (var repository in repositories) {
         var result = await repository.GetDependenciesAsync(
-          package, targetFramework, cacheContext, logger, availablePackages,
-          ignores, false, cancellationToken);
+          package, targetFramework, cacheContext, availablePackages, ignores,
+          logger, cancellationToken);
 
         if (result != null) {
           return result;
@@ -157,101 +161,6 @@ namespace NuGetResolver.Editor {
       }
 
       return null;
-    }
-
-
-    private static NuGetFramework SelectTargetFramework(
-      FrameworkReducer reducer,
-      params NuGetFramework[] frameworks) {
-      var possibleFrameworks = frameworks.Where(x => x != null).ToList();
-      if (possibleFrameworks.Count <= 0) {
-        return null;
-      }
-
-      var framework = possibleFrameworks.First();
-      if (possibleFrameworks.Count == 1) {
-        return framework;
-      }
-
-      possibleFrameworks = possibleFrameworks.Skip(1).ToList();
-      return reducer.GetNearest(framework, possibleFrameworks);
-    }
-
-    private static VersionRange SelectAllowedVersions(params VersionRange[] versions) {
-      VersionRange result = null;
-      foreach (var version in versions) {
-        if (version == null) {
-          continue;
-        }
-
-        if (result == null) {
-          result = version;
-          continue;
-        }
-
-        result = VersionRange.CommonSubSet(new[] { result, version });
-      }
-
-      return result;
-    }
-
-    private static NuGetVersion SelectPreferredVersion(VersionRange versionRange, params NuGetVersion[] versions) {
-      var versionList = versions.Where(x => x != null).OrderBy(x => x).ToList();
-      if (versionRange == null) {
-        return versionList.FirstOrDefault();
-      }
-
-      return versionRange.FindBestMatch(versionList) ?? versionList.FirstOrDefault();
-    }
-
-    private static PackageEntry Merge(
-      this PackageEntry source, PackageEntry other, FrameworkReducer frameworkReducer) {
-      if (!PackageIdComparer.Equals(source.Id, other.Id)) {
-        return source;
-      }
-
-      var allowedVersions = SelectAllowedVersions(source.AllowedVersions, other.AllowedVersions);
-
-      var ignores = new List<IgnoreEntry>();
-      ignores.AddRange(source.Ignores);
-      ignores.AddRange(other.Ignores);
-
-      return new PackageEntry(
-        source.Id,
-        SelectPreferredVersion(allowedVersions, source.Version, other.Version),
-        SelectTargetFramework(frameworkReducer, source.TargetFramework, other.TargetFramework),
-        source.IsDevelopmentDependency && other.IsDevelopmentDependency,
-        allowedVersions,
-        ignores);
-    }
-
-    public static ResolveConfig Merge(this ResolveConfig config, ResolveConfig other, FrameworkReducer frameworkReducer) {
-      var packages = new List<PackageEntry>(config.Packages);
-      foreach (var otherPackage in other.Packages) {
-        var existsIndex = -1;
-        PackageEntry existsPackage = null;
-        for (var i = 0; i < packages.Count; i++) {
-          var package = packages[i];
-          if (!PackageIdComparer.Equals(package.Id, otherPackage.Id)) {
-            continue;
-          }
-
-          existsIndex = i;
-          existsPackage = package;
-          break;
-        }
-
-        if (existsIndex < 0) {
-          packages.Add(otherPackage);
-        } else {
-          packages[existsIndex] = existsPackage.Merge(otherPackage, frameworkReducer);
-        }
-      }
-
-      var ignores = new List<IgnoreEntry>(config.Ignores);
-      ignores.AddRange(other.Ignores);
-
-      return new ResolveConfig(packages, ignores);
     }
   }
 }

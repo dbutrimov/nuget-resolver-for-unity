@@ -1,21 +1,18 @@
-using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace NuGetResolver.Editor {
   internal sealed class ResolveConfig {
-    private static readonly IReadOnlyList<PackageEntry> EmptyPackages = Array.Empty<PackageEntry>();
-    private static readonly IReadOnlyList<IgnoreEntry> EmptyIgnores = Array.Empty<IgnoreEntry>();
+    private IList<PackageEntry> _packages;
+    private IList<IgnoreEntry> _ignores;
 
-    public IReadOnlyList<PackageEntry> Packages { get; }
-    public IReadOnlyList<IgnoreEntry> Ignores { get; }
-
-    public ResolveConfig(IEnumerable<PackageEntry> packages, IEnumerable<IgnoreEntry> ignores) {
-      Packages = packages?.ToList() ?? EmptyPackages;
-      Ignores = ignores?.ToList() ?? EmptyIgnores;
+    public IList<PackageEntry> Packages {
+      get => _packages ??= new List<PackageEntry>();
+      set => _packages = value;
     }
 
-    public ResolveConfig() : this(null, null) {
+    public IList<IgnoreEntry> Ignores {
+      get => _ignores ??= new List<IgnoreEntry>();
+      set => _ignores = value;
     }
   }
 }

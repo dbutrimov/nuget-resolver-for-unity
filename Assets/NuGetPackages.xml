@@ -6,6 +6,7 @@
     <ignore id="System.ComponentModel" />
     <ignore id="System.ComponentModel.TypeConverter" />
     <ignore id="System.Diagnostics.TraceSource" />
+    <ignore id="System.Diagnostics.EventLog" />
     <ignore id="System.Dynamic.Runtime" />
     <ignore id="System.Reflection" />
     <ignore id="System.Reflection.Emit" />

@@ -6,7 +6,7 @@ namespace NuGetResolver.Editor {
     private static readonly NuGetFrameworkFullComparer FullComparer = new NuGetFrameworkFullComparer();
 
     private static readonly ISet<NuGetFramework> Supported =
-      new HashSet<NuGetFramework>(new NuGetFrameworkFullComparer()) {
+      new HashSet<NuGetFramework>(FullComparer) {
 #if UNITY_2021_2_OR_NEWER
         NuGetFramework.Parse("netstandard2.1"),
 #endif

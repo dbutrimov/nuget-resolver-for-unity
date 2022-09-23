@@ -28,21 +28,6 @@ namespace NuGetResolver.Editor {
     public static string PackageEditorPath => Path.Combine(PackagePath, "Editor");
 
 
-    private readonly struct ProgressSegment {
-      private readonly float _min;
-      private readonly float _max;
-
-      public ProgressSegment(float min, float max) {
-        _min = min;
-        _max = max;
-      }
-
-      public float Evaluate(float progress) {
-        return _min + (_max - _min) * progress;
-      }
-    }
-
-
     private static ISettings LoadSettings(ILogger logger = null) {
       logger ??= NullLogger.Instance;
 
@@ -56,15 +41,11 @@ namespace NuGetResolver.Editor {
       return Settings.LoadDefaultSettings(null);
     }
 
-    private static async Task ResolveAsync(
-      IProgress<ProgressReport> progress = null,
-      ILogger logger = null,
-      CancellationToken cancellationToken = default) {
-      const DependencyBehavior dependencyBehavior = DependencyBehavior.Highest;
 
+    private static NuGetFramework GetTargetFramework() {
       var buildTargetGroup = BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget);
       var apiCompatibilityLevel = PlayerSettings.GetApiCompatibilityLevel(buildTargetGroup);
-      var targetFramework = apiCompatibilityLevel switch {
+      return apiCompatibilityLevel switch {
 #if UNITY_2021_2_OR_NEWER
         ApiCompatibilityLevel.NET_Standard => NuGetFramework.Parse("netstandard2.1"),
 #else
@@ -73,23 +54,16 @@ namespace NuGetResolver.Editor {
         ApiCompatibilityLevel.NET_4_6 => NuGetFramework.Parse("net46"),
         _ => throw new InvalidOperationException($"Unsupported API Compatibility Level: {apiCompatibilityLevel}")
       };
+    }
 
-      var projectPath = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
-      var tempPath = Path.Combine(projectPath, "Temp");
-
+    private static async Task<IList<ResolveConfig>> ReadDependenciesAsync(
+      IProgress<float> progress = null,
+      ILogger logger = null,
+      CancellationToken cancellationToken = default) {
       logger ??= NullLogger.Instance;
 
-      var progressSegment = new ProgressSegment(0, 0.1f);
-      var progressReport = new ProgressReport { Progress = 0, Info = "Read packages..." };
-
-      progress?.Report(progressReport);
-
       var configReader = new ResolveConfigReader();
-      var resolveConfig = new ResolveConfig();
-
-      var frameworkReducer = new FrameworkReducer(
-        DefaultFrameworkNameProvider.Instance,
-        new UnityFrameworkCompatibilityProvider());
+      var result = new List<ResolveConfig>();
 
       var assetNameRegex = new Regex(@"^.*NuGetPackages\.xml$", RegexOptions.IgnoreCase | RegexOptions.Singleline);
       var assetGuids = AssetDatabase.FindAssets("NuGetPackages");
@@ -98,6 +72,7 @@ namespace NuGetResolver.Editor {
 
         var fileName = Path.GetFileName(assetPath);
         if (!assetNameRegex.IsMatch(fileName)) {
+          progress?.Report((float)(i + 1) / assetGuids.Length);
           continue;
         }
 
@@ -109,15 +84,46 @@ namespace NuGetResolver.Editor {
 
           using var reader = new StringReader(textAsset.text);
           var config = await Task.Run(() => configReader.Read(reader), cancellationToken);
-          resolveConfig = resolveConfig.Merge(config, frameworkReducer);
+          result.Add(config);
         }
 
-        progressReport.Progress = progressSegment.Evaluate((float)(i + 1) / assetGuids.Length);
-        progress?.Report(progressReport);
+        progress?.Report((float)(i + 1) / assetGuids.Length);
       }
 
+      return result;
+    }
 
-      var targetPackages = resolveConfig.Packages;
+    private static async Task ResolveAsync(
+      IProgress<ProgressReport> progress = null,
+      ILogger logger = null,
+      CancellationToken cancellationToken = default) {
+      const DependencyBehavior dependencyBehavior = DependencyBehavior.Highest;
+
+      var targetFramework = GetTargetFramework();
+
+      var projectPath = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
+      var tempPath = Path.Combine(projectPath, "Temp");
+
+      logger ??= NullLogger.Instance;
+
+      var progressSegment = new ProgressSegment(0, 0.1f);
+      var progressReport = new ProgressReport { Progress = 0, Info = "Read packages..." };
+
+      progress?.Report(progressReport);
+
+      var frameworkReducer = new FrameworkReducer(
+        DefaultFrameworkNameProvider.Instance,
+        new UnityFrameworkCompatibilityProvider());
+
+      var resolveConfigs = await ReadDependenciesAsync(
+        new Progress<float>(
+          p => {
+            progressReport.Progress = progressSegment.Evaluate(p);
+            progress?.Report(progressReport);
+          }),
+        logger,
+        cancellationToken);
+
 
       progressSegment = new ProgressSegment(0.1f, 0.7f);
       progressReport.Info = "Read dependencies...";
@@ -134,71 +140,68 @@ namespace NuGetResolver.Editor {
 
 
       var preferredVersions = new HashSet<PackageIdentity>(PackageIdentityComparer.Default);
-      var references = new List<TreeNode<PackageReference>>();
+      var dependencies = new List<PackageReference>();
 
+      var packageCount = resolveConfigs.Sum(c => c.Packages.Count);
       var packageNumber = 0;
-      foreach (var targetPackage in targetPackages) {
-        packageNumber++;
+      foreach (var resolveConfig in resolveConfigs) {
+        foreach (var targetPackage in resolveConfig.Packages) {
+          packageNumber++;
 
-        var packageIdentity = new PackageIdentity(targetPackage.Id, targetPackage.Version);
+          var packageIdentity = new PackageIdentity(targetPackage.Id, targetPackage.Version);
 
-        progressReport.Info = $"Read dependencies ({packageNumber}/{targetPackages.Count}): {packageIdentity.Id}";
-        progressReport.Progress = progressSegment.Evaluate((float)(packageNumber - 1) / targetPackages.Count);
-        progress?.Report(progressReport);
+          progressReport.Info = $"Read dependencies ({packageNumber}/{packageCount}): {packageIdentity.Id}";
+          progressReport.Progress = progressSegment.Evaluate((float)(packageNumber - 1) / packageCount);
+          progress?.Report(progressReport);
 
-        PackageIdentity preferredVersion;
-        var allowedVersions = targetPackage.AllowedVersions;
-        if (allowedVersions == null) {
-          preferredVersion = packageIdentity;
-        } else {
-          preferredVersion = await repositories.GetPreferredVersionAsync(
-            packageIdentity.Id, allowedVersions, cacheContext, logger, cancellationToken);
-          if (preferredVersion == null) {
+          PackageIdentity preferredVersion;
+          var allowedVersions = targetPackage.AllowedVersions;
+          if (allowedVersions == null) {
             preferredVersion = packageIdentity;
+          } else {
+            preferredVersion = await repositories.GetPreferredVersionAsync(
+              packageIdentity.Id, allowedVersions, cacheContext, logger, cancellationToken);
+            if (preferredVersion == null) {
+              preferredVersion = packageIdentity;
+            }
+          }
+
+          var packageReference = new PackageReference(
+            preferredVersion,
+            targetPackage.TargetFramework ?? targetFramework,
+            true,
+            targetPackage.IsDevelopmentDependency,
+            false,
+            targetPackage.AllowedVersions);
+
+          dependencies.Add(packageReference);
+          preferredVersions.Add(preferredVersion);
+
+          var ignores = new List<IgnoreEntry>(resolveConfig.Ignores);
+          ignores.AddRange(targetPackage.Ignores);
+
+          var packageDependencies = await repositories.GetDependenciesAsync(
+            packageReference, targetFramework, cacheContext, availablePackages, ignores,
+            logger, cancellationToken);
+
+          if (packageDependencies != null) {
+            dependencies.AddRange(packageDependencies);
           }
         }
-
-        var packageReference = new PackageReference(
-          preferredVersion,
-          targetPackage.TargetFramework ?? targetFramework,
-          true,
-          targetPackage.IsDevelopmentDependency,
-          false,
-          targetPackage.AllowedVersions);
-
-        preferredVersions.Add(preferredVersion);
-
-        var ignores = new List<IgnoreEntry>(resolveConfig.Ignores);
-        ignores.AddRange(targetPackage.Ignores);
-
-        var node = await repositories.GetDependenciesAsync(
-          packageReference, targetFramework, cacheContext, logger,
-          availablePackages, ignores, cancellationToken);
-
-        if (node != null) {
-          references.Add(node);
-        }
       }
 
-      using (var writer = File.CreateText(Path.GetFullPath(Path.Combine(tempPath, "NuGetPackages.txt")))) {
-        foreach (var node in references) {
-          node.Print(writer);
-        }
-      }
-
-      var referencesList = references.SelectMany(node => node.ToDepthEnumerable()).ToList();
 
       progressSegment = new ProgressSegment(0.7f, 0.9f);
       progressReport.Info = "Resolve packages...";
       progressReport.Progress = progressSegment.Evaluate(0);
       progress?.Report(progressReport);
 
-      var targetIds = targetPackages.Select(x => x.Id).ToList();
+      var targetIds = resolveConfigs.SelectMany(x => x.Packages).Select(x => x.Id).ToList();
       var resolverContext = new PackageResolverContext(
         dependencyBehavior,
         targetIds,
         Enumerable.Empty<string>(),
-        referencesList.Select(node => node.Value),
+        dependencies,
         preferredVersions,
         availablePackages,
         repositories.Select(x => x.PackageSource),
@@ -206,9 +209,20 @@ namespace NuGetResolver.Editor {
 
       var resolver = new PackageResolver();
       var packagesToInstall = resolver.Resolve(resolverContext, cancellationToken)
-        .Where(p => referencesList.Any(r => !r.Ignore && StringComparer.OrdinalIgnoreCase.Equals(r.Value.PackageIdentity.Id, p.Id)))
+        .Where(p => dependencies.Any(r => StringComparer.OrdinalIgnoreCase.Equals(r.PackageIdentity.Id, p.Id)))
         .Select(p => availablePackages.Single(x => PackageIdentityComparer.Default.Equals(x, p)))
         .ToList();
+
+      using (var writer = File.CreateText(Path.GetFullPath(Path.Combine(tempPath, "NuGetPackages.txt")))) {
+        foreach (var package in packagesToInstall.OrderBy(p => p.Id)) {
+          await writer.WriteAsync(package.Id);
+          if (package.HasVersion) {
+            await writer.WriteAsync($".{package.Version}");
+          }
+
+          await writer.WriteLineAsync();
+        }
+      }
 
       var nugetPath = Path.Combine(tempPath, "NuGet");
       using var deleteNugetDir = new DeleteDirectoryDisposable(nugetPath);
@@ -226,6 +240,9 @@ namespace NuGetResolver.Editor {
       var tempRuntimeDir = DirectoryUtility.Create(Path.Combine(packagesTempPath, "Runtime"), true);
       var tempEditorDir = DirectoryUtility.Create(Path.Combine(packagesTempPath, "Editor"), true);
 
+      var downloadContext = new PackageDownloadContext(cacheContext);
+      var globalPackagesFolder = SettingsUtility.GetGlobalPackagesFolder(settings);
+
       for (var i = 0; i < packagesToInstall.Count; i++) {
         var packageToInstall = packagesToInstall[i];
 
@@ -240,9 +257,10 @@ namespace NuGetResolver.Editor {
             await packageToInstall.Source.GetResourceAsync<DownloadResource>(cancellationToken);
           var downloadResult = await downloadResource.GetDownloadResourceResultAsync(
             packageToInstall,
-            new PackageDownloadContext(cacheContext),
-            SettingsUtility.GetGlobalPackagesFolder(settings),
-            logger, cancellationToken);
+            downloadContext,
+            globalPackagesFolder,
+            logger,
+            cancellationToken);
 
           await PackageExtractor.ExtractPackageAsync(
             downloadResult.PackageSource,
@@ -265,7 +283,7 @@ namespace NuGetResolver.Editor {
           .Where(x => x.TargetFramework.Equals(nearestFramework))
           .SelectMany(x => x.Items);
 
-        var isDevelopmentDependency = referencesList.Select(node => node.Value).IsDevelopmentDependency(packageIdentity.Id);
+        var isDevelopmentDependency = dependencies.IsDevelopmentDependency(packageIdentity.Id);
         var tempDir = isDevelopmentDependency ? tempEditorDir : tempRuntimeDir;
         var tempPackagePath = Path.Combine(tempDir.FullName, packageIdentity.ToString());
 
@@ -318,16 +336,22 @@ namespace NuGetResolver.Editor {
 
     [MenuItem("NuGet/Resolve")]
     public static async void Resolve() {
-      const string title = "Resolve NuGet packages";
-      var logger = UnityNuGetLogger.Default;
+      var logger = new UnityNuGetLogger(LogLevel.Verbose);
 
+      const string title = "Resolve NuGet packages";
       using var cts = new CancellationTokenSource();
 
       var cancel = new CancellationDisposable(cts);
-      using var progressWindow = ProgressWindow.Show(title, cancel);
+      using var progressBar = new ProgressBarDialog(title, cancel);
+
+      var progress = new Progress<ProgressReport>(
+        report => {
+          progressBar.Info = report.Info;
+          progressBar.Progress = report.Progress;
+        });
 
       try {
-        await ResolveAsync(progressWindow, logger, cts.Token);
+        await ResolveAsync(progress, logger, cts.Token);
       } catch (Exception ex) {
         logger.LogError(ex.ToString());
         throw;
