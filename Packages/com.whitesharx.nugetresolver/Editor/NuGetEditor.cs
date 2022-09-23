@@ -65,7 +65,11 @@ namespace NuGetResolver.Editor {
       var buildTargetGroup = BuildPipeline.GetBuildTargetGroup(EditorUserBuildSettings.activeBuildTarget);
       var apiCompatibilityLevel = PlayerSettings.GetApiCompatibilityLevel(buildTargetGroup);
       var targetFramework = apiCompatibilityLevel switch {
+#if UNITY_2021_2_OR_NEWER
+        ApiCompatibilityLevel.NET_Standard => NuGetFramework.Parse("netstandard2.1"),
+#else
         ApiCompatibilityLevel.NET_Standard_2_0 => NuGetFramework.Parse("netstandard2.0"),
+#endif
         ApiCompatibilityLevel.NET_4_6 => NuGetFramework.Parse("net46"),
         _ => throw new InvalidOperationException($"Unsupported API Compatibility Level: {apiCompatibilityLevel}")
       };
