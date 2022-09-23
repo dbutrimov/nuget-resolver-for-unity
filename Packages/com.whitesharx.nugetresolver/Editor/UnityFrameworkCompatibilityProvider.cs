@@ -7,6 +7,9 @@ namespace NuGetResolver.Editor {
 
     private static readonly ISet<NuGetFramework> Supported =
       new HashSet<NuGetFramework>(new NuGetFrameworkFullComparer()) {
+#if UNITY_2021_2_OR_NEWER
+        NuGetFramework.Parse("netstandard2.1"),
+#endif
         NuGetFramework.Parse("netstandard2.0"),
         NuGetFramework.Parse("net45"),
         NuGetFramework.Parse("net452"),
