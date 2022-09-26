@@ -59,13 +59,14 @@ namespace NuGetResolver.Editor {
         }
       }
 
-      return new PackageEntry(
-        packageId,
-        version,
-        targetFramework,
-        developmentDependency,
-        allowedVersions,
-        ignores);
+      return new PackageEntry {
+        Id = packageId,
+        Version = version,
+        TargetFramework = targetFramework,
+        IsDevelopmentDependency = developmentDependency,
+        AllowedVersions = allowedVersions,
+        Ignores = ignores
+      };
     }
 
     private static ResolveConfig Read(XmlNode node) {
@@ -83,7 +84,7 @@ namespace NuGetResolver.Editor {
         }
       }
 
-      return new ResolveConfig(packages, ignores);
+      return new ResolveConfig { Packages = packages, Ignores = ignores };
     }
 
     private static ResolveConfig Read(XmlReader reader) {
